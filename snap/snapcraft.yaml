@@ -49,21 +49,23 @@ contact: https://github.com/sidalit/freetoken-snap/issues
 platforms:
   amd64:
 
+package-repositories:
+  - type: apt
+    url: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/
+    path: /
+    key-id: EB693B3035CD5710E231E123A4B469963BF863CC
+
 plugs:
-  # The server's worker processes use POSIX semaphores and shared memory,
-  # which glibc creates under temporary names in /dev/shm.
+  # Python workers need private POSIX semaphores and shared memory.
   shmem:
     interface: shared-memory
     private: true
 
 environment:
-  # snapd puts $SNAP/usr/bin first, which would run the system Python
-  # instead of the virtual environment's.
+  # Prefer the virtual environment over the system Python.
   PATH: $SNAP/bin:$SNAP/usr/bin:$PATH
-  # The host NVIDIA driver libraries (libcuda, libnvidia-ml).
   LD_LIBRARY_PATH: $SNAP_LIBRARY_PATH
   TRITON_LIBCUDA_PATH: /var/lib/snapd/lib/gl
-  # Triton compiles its CUDA launcher with the bundled compiler.
   CC: $SNAP/bin/freetoken-cc
   PYTHONNOUSERSITE: '1'
   HF_HUB_DISABLE_TELEMETRY: '1'
@@ -95,37 +97,42 @@ apps:
 parts:
   freetoken:
     plugin: nil
+    source: https://github.com/FlashML-org/FreeToken.git
+    source-tag: v$SNAPCRAFT_PROJECT_VERSION
+    source-depth: 1
     build-packages:
+      - build-essential
+      - cuda-toolkit-13-0
+      - ninja-build
+      - python3-dev
       - python3-venv
     build-environment:
-      # Unpack the large CUDA wheels on disk rather than in /tmp.
+      - CUDA_HOME: /usr/local/cuda-13.0
+      - PATH: /usr/local/cuda-13.0/bin:$PATH
+      - MAX_JOBS: $CRAFT_PARALLEL_BUILD_COUNT
       - TMPDIR: $CRAFT_PART_BUILD
     override-build: |
-      release=https://github.com/FlashML-org/FreeToken/releases/download/v$SNAPCRAFT_PROJECT_VERSION
       /usr/bin/python3 -m venv "$CRAFT_PART_INSTALL"
-      # Upstream's published wheels: the runtime and its prebuilt CUDA 13
-      # kernels. PyPI's torch 2.14 is the CUDA 13.0 build.
       "$CRAFT_PART_INSTALL/bin/python3" -m pip install --no-cache-dir \
-        "freetoken @ $release/freetoken-$SNAPCRAFT_PROJECT_VERSION-cp312-cp312-manylinux_2_27_x86_64.whl" \
-        "freetoken-kernel-cache @ $release/freetoken_kernel_cache-$SNAPCRAFT_PROJECT_VERSION+cu130-py3-none-linux_x86_64.whl"
+        'setuptools>=77' wheel 'torch>=2.14,<2.15'
+      "$CRAFT_PART_INSTALL/bin/python3" -m pip install --no-cache-dir --no-build-isolation .
+      "$CRAFT_PART_INSTALL/bin/python3" -m pip install --no-cache-dir --no-build-isolation ./freetoken-kernel-cache
 
       site_packages=$("$CRAFT_PART_INSTALL/bin/python3" -c 'import sysconfig; print(sysconfig.get_path("purelib"))')
-      install -Dm644 "$site_packages"/freetoken-*.dist-info/licenses/LICENSE \
-        "$CRAFT_PART_INSTALL/share/doc/freetoken/LICENSE"
+      find "$site_packages/freetoken" -name '*.so' -exec strip --strip-unneeded {} +
+      install -Dm644 LICENSE "$CRAFT_PART_INSTALL/share/doc/freetoken/LICENSE"
 
       # The environment runs on the base snap's Python 3.12.
       find "$CRAFT_PART_INSTALL/bin" -type f -exec \
         sed -i "1 s|^#!$CRAFT_PART_INSTALL/bin/python3$|#!/usr/bin/env python3|" {} +
     prime:
-      # Headers and static libraries for building extensions against torch,
-      # which the runtime never does.
+      # FreeToken's extensions and CUDA kernel cache are already compiled.
       - -lib/python3.*/site-packages/torch/include
       - -lib/python3.*/site-packages/triton/backends/nvidia/lib/cupti*/*.a
       - -lib/python3.*/site-packages/nvidia/*/lib/*.a
       - -lib/python3.*/site-packages/numpy/**/tests
 
-  # Triton builds a small C module against the host CUDA driver at runtime.
-  # The compiler runs with the snap as its sysroot.
+  # Triton still needs a C compiler for its CUDA driver launcher.
   toolchain:
     plugin: nil
     stage-packages:
@@ -135,16 +142,13 @@ parts:
       - libpython3.12-dev
     override-build: |
       craftctl default
-      # The libc.so linker script names /lib and /lib64 paths, which the
-      # sysroot resolves inside the snap: lib is the virtual environment's
-      # directory and lib64 links to it. Link against the base's C runtime.
+      # Resolve the sysroot's /lib paths against the base's C runtime.
       mkdir -p "$CRAFT_PART_INSTALL/lib/x86_64-linux-gnu"
       for file in libc.so.6 libm.so.6 libgcc_s.so.1; do
         ln -sf "/usr/lib/x86_64-linux-gnu/$file" "$CRAFT_PART_INSTALL/lib/x86_64-linux-gnu/$file"
       done
       ln -sf /usr/lib64/ld-linux-x86-64.so.2 "$CRAFT_PART_INSTALL/lib/ld-linux-x86-64.so.2"
     prime:
-      - -usr/share/doc
       - -usr/share/man
       - -usr/share/info
       - -usr/share/locale

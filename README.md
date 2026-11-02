@@ -48,7 +48,7 @@ freetoken checkpoint --model ~/models/<hf-dir> --out ~/models/<ftw-dir>
 
 ## Configure
 
-Models downloaded from Hugging Face or ModelScope, and the Triton and CUDA caches, are kept in `~/snap/freetoken/common/.cache`, so they survive snap refreshes. Local models can be read from your home directory.
+Models downloaded from Hugging Face or ModelScope, and the Triton and CUDA caches, are kept under `~/snap/freetoken/common`, so they survive snap refreshes. Local models can be read from your home directory.
 
 Some features need an interface that is not connected automatically:
 
@@ -76,7 +76,8 @@ The service runs as root and keeps its downloads in `/var/snap/freetoken/common`
 
 ## Limitations
 
-- Only NVIDIA GPUs on amd64 are supported, as upstream publishes CUDA 13 wheels for x86_64 only.
+- Only NVIDIA GPUs on amd64 are supported.
+- For multiple GPUs, pass `--disable-pynccl` to `freetoken serve`. This uses PyTorch's NCCL backend; the custom PyNCCL backend requires a CUDA compiler at runtime, which is not included.
 - `freetoken launch` is unavailable: the strict snap cannot install or configure coding agents on the host. Start the server and point your agent at its HTTP API instead.
 - Files outside your home directory and, once connected, removable media are inaccessible. Hidden folders directly under your home directory are not read either, so an existing `~/.cache/huggingface` cache is not reused; models are downloaded again into the snap's own cache.
 - The snap is about 3 GB, mostly the bundled PyTorch and CUDA libraries.

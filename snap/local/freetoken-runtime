@@ -1,6 +1,5 @@
 #!/bin/bash
-# Sourced by the launchers; keeps models and caches in the given directory,
-# which survives snap refreshes.
+# Keep models and caches outside revisioned data.
 freetoken_prepare_runtime() {
     export HOME="$1"
     export XDG_CACHE_HOME="$HOME/.cache"
