@@ -1,0 +1,54 @@
+#!/bin/bash
+set -euo pipefail
+
+enabled=$(snapctl get daemon.enabled)
+model=$(snapctl get daemon.model)
+host=$(snapctl get daemon.host)
+port=$(snapctl get daemon.port)
+api_key=$(snapctl get daemon.api-key)
+enabled=${enabled:-false}
+host=${host:-127.0.0.1}
+port=${port:-1919}
+
+case "$enabled" in
+    true|false) ;;
+    *) echo "daemon.enabled must be true or false" >&2; exit 1 ;;
+esac
+case "$host" in
+    127.0.0.1|0.0.0.0) ;;
+    *) echo "daemon.host must be 127.0.0.1 or 0.0.0.0" >&2; exit 1 ;;
+esac
+if ! [[ "$port" =~ ^[0-9]{1,5}$ ]] || ((10#$port < 1 || 10#$port > 65535)); then
+    echo "daemon.port must be an integer between 1 and 65535" >&2
+    exit 1
+fi
+if [[ "$api_key" =~ [[:space:]] ]]; then
+    echo "daemon.api-key must not contain whitespace" >&2
+    exit 1
+fi
+if [[ "$host" == 0.0.0.0 && -z "$api_key" ]]; then
+    echo "daemon.api-key is required when daemon.host is 0.0.0.0" >&2
+    exit 1
+fi
+if [[ "$enabled" == true && -z "$model" ]]; then
+    echo "daemon.model is required when daemon.enabled is true" >&2
+    exit 1
+fi
+
+service="$SNAP_INSTANCE_NAME.daemon"
+if [[ "$enabled" != true ]]; then
+    snapctl stop --disable "$service"
+    exit 0
+fi
+
+active=false
+while read -r name _ current _; do
+    if [[ "$name" == "$service" && "$current" == active ]]; then
+        active=true
+    fi
+done <<< "$(snapctl services "$service")"
+
+snapctl start --enable "$service"
+if [[ "$active" == true ]]; then
+    snapctl restart "$service"
+fi

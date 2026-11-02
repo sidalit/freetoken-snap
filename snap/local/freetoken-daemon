@@ -1,0 +1,24 @@
+#!/bin/bash
+set -euo pipefail
+
+enabled=$(snapctl get daemon.enabled)
+model=$(snapctl get daemon.model)
+host=$(snapctl get daemon.host)
+port=$(snapctl get daemon.port)
+api_key=$(snapctl get daemon.api-key)
+if [[ "${enabled:-false}" != true || -z "$model" ]]; then
+    echo "The daemon is disabled; set daemon.model and daemon.enabled=true with snap set $SNAP_INSTANCE_NAME."
+    exit 0
+fi
+
+source "$SNAP/bin/freetoken-runtime"
+freetoken_prepare_runtime "$SNAP_COMMON"
+cd "$SNAP_COMMON"
+# Keep the key out of the process list.
+if [[ -n "$api_key" ]]; then
+    export FREETOKEN_API_KEY="$api_key"
+else
+    unset FREETOKEN_API_KEY
+fi
+exec "$SNAP/bin/ft" serve --model "$model" \
+    --host "${host:-127.0.0.1}" --port "${port:-1919}"

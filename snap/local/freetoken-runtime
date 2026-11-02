@@ -1,0 +1,12 @@
+#!/bin/bash
+# Sourced by the launchers; keeps models and caches in the given directory,
+# which survives snap refreshes.
+freetoken_prepare_runtime() {
+    export HOME="$1"
+    export XDG_CACHE_HOME="$HOME/.cache"
+    export HF_HOME="$XDG_CACHE_HOME/huggingface"
+    export MODELSCOPE_CACHE="$XDG_CACHE_HOME/modelscope"
+    export TRITON_CACHE_DIR="$HOME/.triton/cache"
+    export CUDA_CACHE_PATH="$XDG_CACHE_HOME/nvidia"
+    mkdir -p "$XDG_CACHE_HOME"
+}

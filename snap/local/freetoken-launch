@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+
+if [[ "${1:-}" == launch ]]; then
+    echo "The strict snap cannot install or configure host coding agents. Start the server and point your agent at its HTTP API." >&2
+    exit 64
+fi
+
+source "$SNAP/bin/freetoken-runtime"
+freetoken_prepare_runtime "$SNAP_USER_COMMON"
+exec "$SNAP/bin/ft" "$@"

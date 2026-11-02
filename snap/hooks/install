@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+
+umask 077
+mkdir -p "$SNAP_COMMON/models"
+
+[[ -n "$(snapctl get daemon.enabled)" ]] || snapctl set daemon.enabled=false
+[[ -n "$(snapctl get daemon.host)" ]] || snapctl set daemon.host=127.0.0.1
+[[ -n "$(snapctl get daemon.port)" ]] || snapctl set daemon.port=1919

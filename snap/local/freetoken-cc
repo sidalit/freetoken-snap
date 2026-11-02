@@ -1,0 +1,6 @@
+#!/bin/bash
+# The bundled GCC, using the snap as its sysroot for headers and libraries.
+export LD_LIBRARY_PATH="$SNAP/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export PATH="$SNAP/usr/bin:$PATH"
+# Python's own include path points at the base snap, which has no headers.
+exec "$SNAP/usr/bin/gcc" --sysroot="$SNAP" -I"$SNAP/usr/include/python3.12" "$@"
