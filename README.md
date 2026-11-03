@@ -24,14 +24,17 @@ Unofficial snap packaging for [FreeToken](https://github.com/FlashML-org/FreeTok
 
 <a href="https://snapcraft.io/freetoken"><img alt="Get it from the Snap Store" src="https://snapcraft.io/en/dark/install.svg" width="180"></a>
 
-For a graphical interface, use [freetoken-desktop](https://snapcraft.io/freetoken-desktop), which manages its own engine and models.
+For a graphical interface, [freetoken-desktop](https://snapcraft.io/freetoken-desktop) can use the shared backend below.
 
 Local inference needs an NVIDIA GPU (RTX 30 series or newer) with driver 580 or newer. Install the snap with its CUDA component:
 
 ```bash
+sudo snap set system experimental.user-daemons=true
 sudo snap install freetoken+cuda
 freetoken serve --model Qwen/Qwen3.6-35B-A3B --port 1919
 ```
+
+The user-daemons flag is required to install this snap because it includes an optional user service, even when that service is disabled.
 
 The server listens on `http://127.0.0.1:1919`. In a second terminal, chat with it or query it:
 
@@ -77,6 +80,25 @@ sudo snap set freetoken daemon.model=Qwen/Qwen3.6-35B-A3B daemon.enabled=true
 | `daemon.api-key` | (unset) | API key required on every request; mandatory with `daemon.host=0.0.0.0` |
 
 The service runs as root and keeps its downloads in `/var/snap/freetoken/common`. It cannot read home directories: put local models in `/var/snap/freetoken/common/models`, or on removable media once `removable-media` is connected. Follow its logs with `sudo snap logs -f freetoken.daemon`, and disable it with `sudo snap set freetoken daemon.enabled=false`.
+
+### Desktop backend
+
+The optional backend lets FreeToken Desktop use this snap's engine and CUDA component. It runs as your desktop user and waits for the desktop to select a model.
+
+```bash
+sudo snap set freetoken daemon.enabled=false
+sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" \
+  /var/snap/freetoken/common/server /var/snap/freetoken/common/models
+snap start --user --enable freetoken.backend
+```
+
+Run the last command without `sudo`. This setup is for one desktop user; use the system service above for unattended operation. Existing model files retain their ownership.
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `backend.port` | `1900` | Local management port, from 1024 to 65535; restart with `snap restart --user freetoken.backend` after changing it |
+
+Connect the desktop using its [shared backend instructions](https://github.com/sidalit/freetoken-desktop-snap#shared-backend). It downloads models into `/var/snap/freetoken/common/models`; a private token authenticates management requests. Stop the backend and its engine with `snap stop --user --disable freetoken.backend`.
 
 ## Limitations
 

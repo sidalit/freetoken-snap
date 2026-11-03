@@ -6,9 +6,11 @@ model=$(snapctl get daemon.model)
 host=$(snapctl get daemon.host)
 port=$(snapctl get daemon.port)
 api_key=$(snapctl get daemon.api-key)
+backend_port=$(snapctl get backend.port)
 enabled=${enabled:-false}
 host=${host:-127.0.0.1}
 port=${port:-1919}
+backend_port=${backend_port:-1900}
 
 case "$enabled" in
     true|false) ;;
@@ -20,6 +22,10 @@ case "$host" in
 esac
 if ! [[ "$port" =~ ^[0-9]{1,5}$ ]] || ((10#$port < 1 || 10#$port > 65535)); then
     echo "daemon.port must be an integer between 1 and 65535" >&2
+    exit 1
+fi
+if ! [[ "$backend_port" =~ ^[0-9]{1,5}$ ]] || ((10#$backend_port < 1024 || 10#$backend_port > 65535)); then
+    echo "backend.port must be an integer between 1024 and 65535" >&2
     exit 1
 fi
 if [[ "$api_key" =~ [[:space:]] ]]; then

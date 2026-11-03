@@ -1,0 +1,42 @@
+#!/bin/bash
+set -euo pipefail
+
+if (( EUID == 0 )); then
+    echo 'Start the desktop backend as your user: snap start --user --enable freetoken.backend' >&2
+    exit 1
+fi
+if [[ "$(snapctl get daemon.enabled)" == true ]]; then
+    echo 'Disable the fixed-model service first: sudo snap set freetoken daemon.enabled=false' >&2
+    exit 1
+fi
+
+server="$SNAP_COMMON/server"
+for directory in "$server" "$SNAP_COMMON/models"; do
+    if [[ ! -O "$directory" || ! -w "$directory" ]]; then
+        echo "Create $directory owned by your desktop user; see the backend setup in the README." >&2
+        exit 1
+    fi
+done
+
+source "$SNAP/bin/freetoken-runtime"
+freetoken_require_cuda
+freetoken_prepare_runtime "$SNAP_USER_COMMON"
+cd "$SNAP_USER_COMMON"
+
+umask 077
+if [[ ! -s "$server/token" ]]; then
+    "$SNAP/bin/python3" -c 'import secrets; print(secrets.token_hex(32))' > "$server/token"
+fi
+FREETOKEN_DAEMON_TOKEN=$(< "$server/token")
+export FREETOKEN_DAEMON_TOKEN
+if ! [[ "$FREETOKEN_DAEMON_TOKEN" =~ ^[0-9a-f]{64}$ ]]; then
+    echo "Invalid backend token in $server/token" >&2
+    exit 1
+fi
+
+port=$(snapctl get backend.port)
+port=${port:-1900}
+printf 'http://127.0.0.1:%s\n' "$port" > "$server/url"
+
+exec "$SNAP/bin/ft" daemon --host 127.0.0.1 --port "$port" \
+    --state-dir "$SNAP_USER_COMMON/backend" --stop-serve-on-exit --no-oom

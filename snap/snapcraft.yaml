@@ -11,8 +11,8 @@ description: |
   work between the GPU, the CPU and host memory, and serves them through
   OpenAI and Anthropic-compatible HTTP APIs.
 
-  For a graphical interface, use freetoken-desktop, which manages its
-  own engine and models.
+  FreeToken Desktop can connect to the optional user backend to share
+  this snap's engine, CUDA runtime and models.
 
   **Examples**
 
@@ -66,6 +66,18 @@ plugs:
     interface: shared-memory
     private: true
 
+slots:
+  server:
+    interface: content
+    content: freetoken-server-v1
+    read:
+      - $SNAP_COMMON/server
+  models:
+    interface: content
+    content: freetoken-models-v1
+    write:
+      - $SNAP_COMMON/models
+
 environment:
   # Prefer the virtual environment over the system Python.
   PATH: $SNAP/bin:$SNAP/usr/bin:$PATH
@@ -97,6 +109,19 @@ apps:
     stop-timeout: 60s
     plugs:
       - removable-media
+      - network
+      - network-bind
+      - opengl
+      - shmem
+
+  backend:
+    command: bin/freetoken-backend
+    daemon: simple
+    daemon-scope: user
+    install-mode: disable
+    restart-condition: on-failure
+    stop-timeout: 60s
+    plugs:
       - network
       - network-bind
       - opengl
