@@ -41,6 +41,10 @@ if [[ "$enabled" != true ]]; then
     exit 0
 fi
 
+if [[ ! -d "$SNAP_COMPONENTS/cuda/site-packages/torch" ]]; then
+    snapctl install +cuda
+fi
+
 active=false
 while read -r name _ current _; do
     if [[ "$name" == "$service" && "$current" == active ]]; then

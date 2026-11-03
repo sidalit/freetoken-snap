@@ -24,10 +24,12 @@ Unofficial snap packaging for [FreeToken](https://github.com/FlashML-org/FreeTok
 
 <a href="https://snapcraft.io/freetoken"><img alt="Get it from the Snap Store" src="https://snapcraft.io/en/dark/install.svg" width="180"></a>
 
-You need an NVIDIA GPU (RTX 30 series or newer) with driver 580 or newer. The CUDA runtime is included in the snap.
+For a graphical interface, use [freetoken-desktop](https://snapcraft.io/freetoken-desktop), which manages its own engine and models.
+
+Local inference needs an NVIDIA GPU (RTX 30 series or newer) with driver 580 or newer. Install the snap with its CUDA component:
 
 ```bash
-sudo snap install freetoken
+sudo snap install freetoken+cuda
 freetoken serve --model Qwen/Qwen3.6-35B-A3B --port 1919
 ```
 
@@ -39,6 +41,8 @@ freetoken ctl stats
 ```
 
 Point any OpenAI or Anthropic-compatible client at `http://127.0.0.1:1919`. Stop the server with `Ctrl+C`.
+
+For a remote server, install only `freetoken` and run `freetoken shell --server http://SERVER:1919`; the CUDA component is unnecessary.
 
 To convert a Hugging Face checkpoint to FreeToken's FTW format:
 
@@ -58,7 +62,7 @@ Some features need an interface that is not connected automatically:
 
 ### Background service
 
-The snap includes an optional system service, disabled by default. Enable it once a model is set:
+The snap includes an optional system service, disabled by default. Enabling it installs the CUDA component if needed:
 
 ```bash
 sudo snap set freetoken daemon.model=Qwen/Qwen3.6-35B-A3B daemon.enabled=true
@@ -80,7 +84,7 @@ The service runs as root and keeps its downloads in `/var/snap/freetoken/common`
 - For multiple GPUs, pass `--disable-pynccl` to `freetoken serve`. This uses PyTorch's NCCL backend; the custom PyNCCL backend requires a CUDA compiler at runtime, which is not included.
 - `freetoken launch` is unavailable: the strict snap cannot install or configure coding agents on the host. Start the server and point your agent at its HTTP API instead.
 - Files outside your home directory and, once connected, removable media are inaccessible. Hidden folders directly under your home directory are not read either, so an existing `~/.cache/huggingface` cache is not reused; models are downloaded again into the snap's own cache.
-- The snap is about 3 GB, mostly the bundled PyTorch and CUDA libraries.
+- Local inference still needs roughly 3 GB across the snap and CUDA component. Models are downloaded separately.
 
 ## Build
 
@@ -90,6 +94,8 @@ cd freetoken-snap
 sudo snap install snapcraft --classic
 snapcraft pack
 ```
+
+Builds use upstream's prebuilt engine and CUDA-kernel wheels: the selected release for beta, or the latest nightly for edge, versioned with its commit.
 
 ## Support
 

@@ -7,5 +7,21 @@ if [[ "${1:-}" == launch ]]; then
 fi
 
 source "$SNAP/bin/freetoken-runtime"
+case "${1:-}" in
+    serve|checkpoint|bench) freetoken_require_cuda ;;
+    daemon)
+        case "${2:-}" in
+            self|status|health|metrics|stats|start|stop|switch|logs|-h|--help) ;;
+            *) freetoken_require_cuda ;;
+        esac
+        ;;
+    shell)
+        for arg in "$@"; do
+            case "$arg" in
+                --model|--model=*|--model-path|--model-path=*) freetoken_require_cuda ;;
+            esac
+        done
+        ;;
+esac
 freetoken_prepare_runtime "$SNAP_USER_COMMON"
 exec "$SNAP/bin/ft" "$@"

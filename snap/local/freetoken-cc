@@ -1,6 +1,7 @@
 #!/bin/bash
-# The bundled GCC, using the snap as its sysroot for headers and libraries.
-export LD_LIBRARY_PATH="$SNAP/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-export PATH="$SNAP/usr/bin:$PATH"
+# Keep the compiler, headers and libraries in the same component sysroot.
+sysroot="$SNAP_COMPONENTS/cuda"
+export LD_LIBRARY_PATH="$sysroot/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export PATH="$sysroot/usr/bin:$PATH"
 # Python's own include path points at the base snap, which has no headers.
-exec "$SNAP/usr/bin/gcc" --sysroot="$SNAP" -I"$SNAP/usr/include/python3.12" "$@"
+exec "$sysroot/usr/bin/gcc" --sysroot="$sysroot" -I"$sysroot/usr/include/python3.12" "$@"

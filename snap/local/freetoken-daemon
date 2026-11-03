@@ -12,6 +12,8 @@ if [[ "${enabled:-false}" != true || -z "$model" ]]; then
 fi
 
 source "$SNAP/bin/freetoken-runtime"
+# Configure installs the component before starting an enabled service.
+freetoken_require_cuda || exit 0
 freetoken_prepare_runtime "$SNAP_COMMON"
 cd "$SNAP_COMMON"
 # Keep the key out of the process list.

@@ -1,4 +1,11 @@
 #!/bin/bash
+freetoken_require_cuda() {
+    if [[ ! -d "$SNAP_COMPONENTS/cuda/site-packages/torch" ]]; then
+        echo "Local inference requires CUDA support; run: sudo snap install $SNAP_INSTANCE_NAME+cuda" >&2
+        return 1
+    fi
+}
+
 # Keep models and caches outside revisioned data.
 freetoken_prepare_runtime() {
     export HOME="$1"
