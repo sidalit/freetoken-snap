@@ -139,14 +139,17 @@ parts:
       - gcc
       - binutils
       - libc6-dev
+      - libgcc-s1
       - libpython3.12-dev
     override-build: |
       craftctl default
       # Resolve the sysroot's /lib paths against the base's C runtime.
       mkdir -p "$CRAFT_PART_INSTALL/lib/x86_64-linux-gnu"
-      for file in libc.so.6 libm.so.6 libgcc_s.so.1; do
+      for file in libc.so.6 libm.so.6; do
         ln -sf "/usr/lib/x86_64-linux-gnu/$file" "$CRAFT_PART_INSTALL/lib/x86_64-linux-gnu/$file"
       done
+      ln -sf ../../usr/lib/x86_64-linux-gnu/libgcc_s.so.1 \
+        "$CRAFT_PART_INSTALL/lib/x86_64-linux-gnu/libgcc_s.so.1"
       ln -sf /usr/lib64/ld-linux-x86-64.so.2 "$CRAFT_PART_INSTALL/lib/ld-linux-x86-64.so.2"
     prime:
       - -usr/share/man
