@@ -1,6 +1,6 @@
 name: freetoken
 base: core24
-version: '0.2.1'
+version: '0.2.2'
 adopt-info: freetoken
 title: FreeToken
 icon: snap/gui/freetoken.png
